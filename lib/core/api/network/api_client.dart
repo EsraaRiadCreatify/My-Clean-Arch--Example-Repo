@@ -11,11 +11,16 @@ import 'dart:io';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive/hive.dart';
+import 'api_request_handler.dart';
+import 'api_error_handler.dart';
+import 'api_headers_handler.dart';
 
 class ApiClient {
   final Dio _dio;
   final ApiConfig _config;
   final ApiCache? _cache;
+  final ApiRequestHandler _requestHandler;
+  final ApiErrorHandler _errorHandler;
   final CancelToken _cancelToken = CancelToken();
   final _loadingController = LoadingController();
   
@@ -35,7 +40,16 @@ class ApiClient {
          baseUrl: config.baseUrl,
          connectTimeout: config.timeout,
          headers: config.headers,
-       )) {
+       )),
+       _requestHandler = ApiRequestHandler(
+         Dio(BaseOptions(
+           baseUrl: config.baseUrl,
+           connectTimeout: config.timeout,
+           headers: config.headers,
+         )),
+         cache,
+       ),
+       _errorHandler = ApiErrorHandler(onUnauthorized: onUnauthorized) {
     _setupDio(interceptor);
   }
 
@@ -43,10 +57,7 @@ class ApiClient {
     _dio.options.baseUrl = _config.baseUrl;
     _dio.options.connectTimeout = _config.timeout;
     _dio.options.receiveTimeout = _config.timeout;
-    _dio.options.headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+    _dio.options.headers = ApiHeadersHandler.getDefaultHeaders();
 
     if (interceptor != null) {
       _dio.interceptors.add(interceptor);
@@ -64,19 +75,29 @@ class ApiClient {
     bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
-    final response = await _request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.get,
-      queryParameters: queryParameters,
-      options: options,
-      cancelToken: cancelToken,
-      onReceiveProgress: onReceiveProgress,
-      handleError: handleError,
-      showLoading: showLoading,
-      isGlobalLoader: isGlobalLoader,
-    );
-    
-    return returnFullResponse ? response as T : response.data as T;
+    try {
+      final response = await _requestHandler.request<T>(
+        endpoint: endpoint,
+        method: 'GET',
+        queryParameters: {
+          ...ApiHeadersHandler.getDefaultQueryParameters(),
+          ...queryParameters ?? {},
+        },
+        options: options,
+        cancelToken: cancelToken,
+        onReceiveProgress: onReceiveProgress,
+        handleError: handleError,
+        showLoading: showLoading,
+        isGlobalLoader: isGlobalLoader,
+      );
+      
+      return returnFullResponse ? response as T : response.data as T;
+    } catch (e) {
+      if (handleError) {
+        _errorHandler.handleError(e);
+      }
+      rethrow;
+    }
   }
 
   Future<T> post<T>(
@@ -92,21 +113,31 @@ class ApiClient {
     bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
-    final response = await _request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.post,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-      handleError: handleError,
-      showLoading: showLoading,
-      isGlobalLoader: isGlobalLoader,
-    );
-    
-    return returnFullResponse ? response as T : response.data as T;
+    try {
+      final response = await _requestHandler.request<T>(
+        endpoint: endpoint,
+        method: 'POST',
+        data: data,
+        queryParameters: {
+          ...ApiHeadersHandler.getDefaultQueryParameters(),
+          ...queryParameters ?? {},
+        },
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+        handleError: handleError,
+        showLoading: showLoading,
+        isGlobalLoader: isGlobalLoader,
+      );
+      
+      return returnFullResponse ? response as T : response.data as T;
+    } catch (e) {
+      if (handleError) {
+        _errorHandler.handleError(e);
+      }
+      rethrow;
+    }
   }
 
   Future<T> put<T>(
@@ -122,21 +153,31 @@ class ApiClient {
     bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
-    final response = await _request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.put,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-      handleError: handleError,
-      showLoading: showLoading,
-      isGlobalLoader: isGlobalLoader,
-    );
-    
-    return returnFullResponse ? response as T : response.data as T;
+    try {
+      final response = await _requestHandler.request<T>(
+        endpoint: endpoint,
+        method: 'PUT',
+        data: data,
+        queryParameters: {
+          ...ApiHeadersHandler.getDefaultQueryParameters(),
+          ...queryParameters ?? {},
+        },
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+        handleError: handleError,
+        showLoading: showLoading,
+        isGlobalLoader: isGlobalLoader,
+      );
+      
+      return returnFullResponse ? response as T : response.data as T;
+    } catch (e) {
+      if (handleError) {
+        _errorHandler.handleError(e);
+      }
+      rethrow;
+    }
   }
 
   Future<T> delete<T>(
@@ -150,19 +191,29 @@ class ApiClient {
     bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
-    final response = await _request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.delete,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-      cancelToken: cancelToken,
-      handleError: handleError,
-      showLoading: showLoading,
-      isGlobalLoader: isGlobalLoader,
-    );
-    
-    return returnFullResponse ? response as T : response.data as T;
+    try {
+      final response = await _requestHandler.request<T>(
+        endpoint: endpoint,
+        method: 'DELETE',
+        data: data,
+        queryParameters: {
+          ...ApiHeadersHandler.getDefaultQueryParameters(),
+          ...queryParameters ?? {},
+        },
+        options: options,
+        cancelToken: cancelToken,
+        handleError: handleError,
+        showLoading: showLoading,
+        isGlobalLoader: isGlobalLoader,
+      );
+      
+      return returnFullResponse ? response as T : response.data as T;
+    } catch (e) {
+      if (handleError) {
+        _errorHandler.handleError(e);
+      }
+      rethrow;
+    }
   }
 
   Future<T> patch<T>(
@@ -178,120 +229,35 @@ class ApiClient {
     bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
-    final response = await _request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.patch,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-      handleError: handleError,
-      showLoading: showLoading,
-      isGlobalLoader: isGlobalLoader,
-    );
-    
-    return returnFullResponse ? response as T : response.data as T;
-  }
-
-  Future<Response<T>> _request<T>({
-    required String endpoint,
-    required RequestMethod method,
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-    CancelToken? cancelToken,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-    bool handleError = true,
-    bool showLoading = true,
-    bool isGlobalLoader = true,
-    bool? useCache,
-    Duration? cacheDuration,
-    bool? validateResponse,
-    bool isFormData = false,
-  }) async {
     try {
-      if (showLoading) {
-        _loadingController.startLoading(
-          isGlobal: isGlobalLoader,
-          message: _getLoadingMessage(method),
-        );
-      }
-
-      // Check cache first if enabled
-      final shouldUseCache = useCache ?? _config.useCache;
-      if (shouldUseCache && _cache != null) {
-        final cachedData = await _cache!.getCachedResponse<T>(
-          key: _getCacheKey(endpoint, queryParameters),
-        );
-        
-        if (cachedData != null) {
-          if (showLoading) {
-            _loadingController.stopLoading(isGlobal: isGlobalLoader);
-          }
-          return Response(
-            data: cachedData,
-            statusCode: 200,
-            requestOptions: RequestOptions(path: endpoint),
-          );
-        }
-      }
-
-      // Make the request
-      final response = await _dio.request<T>(
-        endpoint,
-        data: isFormData ? FormData.fromMap(data ?? {}) : data,
+      final response = await _requestHandler.request<T>(
+        endpoint: endpoint,
+        method: 'PATCH',
+        data: data,
         queryParameters: {
+          ...ApiHeadersHandler.getDefaultQueryParameters(),
           ...queryParameters ?? {},
-          'device_type': Platform.isIOS ? 'ios' : 'android',
-          'lang': 'ar',
         },
-        options: Options(
-          method: method.name,
-          headers: {
-            ..._getDefaultHeaders(),
-            ...options?.headers ?? {},
-          },
-          contentType: options?.contentType,
-        ),
-        cancelToken: cancelToken ?? _cancelToken,
+        options: options,
+        cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
+        handleError: handleError,
+        showLoading: showLoading,
+        isGlobalLoader: isGlobalLoader,
       );
-
-      // Validate response if enabled
-      final shouldValidate = validateResponse ?? _config.validateResponse;
-      if (shouldValidate) {
-        final apiResponse = ApiResponse<T>(
-          data: response.data,
-          statusCode: response.statusCode,
-          success: true,
-        );
-        ApiValidator.validateResponse(apiResponse);
-      }
-
-      // Cache response if enabled
-      if (shouldUseCache && _cache != null) {
-        await _cache!.cacheResponse(
-          key: _getCacheKey(endpoint, queryParameters),
-          data: response.data,
-          cacheDuration: cacheDuration,
-        );
-      }
-
-      return response;
+      
+      return returnFullResponse ? response as T : response.data as T;
     } catch (e) {
       if (handleError) {
-        _handleError(e);
+        _errorHandler.handleError(e);
       }
       rethrow;
-    } finally {
-      if (showLoading) {
-        _loadingController.stopLoading(isGlobal: isGlobalLoader);
-      }
     }
+  }
+
+  void cancelRequests() {
+    _cancelToken.cancel();
   }
 
   String _getLoadingMessage(RequestMethod method) {
@@ -396,10 +362,6 @@ class ApiClient {
       'device_type': Platform.isIOS ? 'ios' : 'android',
       'lang': 'ar',
     };
-  }
-
-  void cancelRequests() {
-    _cancelToken.cancel();
   }
 
   String _getCacheKey(String endpoint, Map<String, dynamic>? queryParameters) {
