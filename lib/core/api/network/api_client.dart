@@ -61,6 +61,7 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
     final response = await _request<T>(
@@ -72,6 +73,7 @@ class ApiClient {
       onReceiveProgress: onReceiveProgress,
       handleError: handleError,
       showLoading: showLoading,
+      isGlobalLoader: isGlobalLoader,
     );
     
     return returnFullResponse ? response as T : response.data as T;
@@ -87,6 +89,7 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
     final response = await _request<T>(
@@ -100,6 +103,7 @@ class ApiClient {
       onReceiveProgress: onReceiveProgress,
       handleError: handleError,
       showLoading: showLoading,
+      isGlobalLoader: isGlobalLoader,
     );
     
     return returnFullResponse ? response as T : response.data as T;
@@ -115,6 +119,7 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
     final response = await _request<T>(
@@ -128,6 +133,7 @@ class ApiClient {
       onReceiveProgress: onReceiveProgress,
       handleError: handleError,
       showLoading: showLoading,
+      isGlobalLoader: isGlobalLoader,
     );
     
     return returnFullResponse ? response as T : response.data as T;
@@ -141,6 +147,7 @@ class ApiClient {
     CancelToken? cancelToken,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
     final response = await _request<T>(
@@ -152,6 +159,7 @@ class ApiClient {
       cancelToken: cancelToken,
       handleError: handleError,
       showLoading: showLoading,
+      isGlobalLoader: isGlobalLoader,
     );
     
     return returnFullResponse ? response as T : response.data as T;
@@ -167,6 +175,7 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool returnFullResponse = false,
   }) async {
     final response = await _request<T>(
@@ -180,6 +189,7 @@ class ApiClient {
       onReceiveProgress: onReceiveProgress,
       handleError: handleError,
       showLoading: showLoading,
+      isGlobalLoader: isGlobalLoader,
     );
     
     return returnFullResponse ? response as T : response.data as T;
@@ -196,6 +206,7 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool isGlobalLoader = true,
     bool? useCache,
     Duration? cacheDuration,
     bool? validateResponse,
@@ -204,7 +215,7 @@ class ApiClient {
     try {
       if (showLoading) {
         _loadingController.startLoading(
-          isGlobal: true,
+          isGlobal: isGlobalLoader,
           message: _getLoadingMessage(method),
         );
       }
@@ -218,7 +229,7 @@ class ApiClient {
         
         if (cachedData != null) {
           if (showLoading) {
-            _loadingController.stopLoading(isGlobal: true);
+            _loadingController.stopLoading(isGlobal: isGlobalLoader);
           }
           return Response(
             data: cachedData,
@@ -278,7 +289,7 @@ class ApiClient {
       rethrow;
     } finally {
       if (showLoading) {
-        _loadingController.stopLoading(isGlobal: true);
+        _loadingController.stopLoading(isGlobal: isGlobalLoader);
       }
     }
   }
