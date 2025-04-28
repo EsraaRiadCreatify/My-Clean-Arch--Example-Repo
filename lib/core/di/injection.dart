@@ -1,3 +1,5 @@
+import 'package:api/features/profile/data/repositories/profile_repository.dart';
+import 'package:api/features/profile/domain/services/profile_service.dart';
 import 'package:get_it/get_it.dart';
 import '../api/network/api_client.dart';
 import '../api/config/api_config.dart';
@@ -38,4 +40,9 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<UserRepository>(
     () => UserRepositoryImpl(getIt<UserRemoteDataSource>()),
   );
+   // Repositories
+  getIt.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl());
+
+  // Services
+  getIt.registerLazySingleton<ProfileService>(() => ProfileService());
 } 

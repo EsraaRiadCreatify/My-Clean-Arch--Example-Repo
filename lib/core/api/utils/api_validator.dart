@@ -1,5 +1,5 @@
-import '../base/api_exception.dart';
-import '../base/api_response.dart';
+import '../../../../core/api/base/api_exception.dart';
+import '../../../../core/api/base/api_response.dart';
 
 class ApiValidator {
   static void validateResponse<T>(ApiResponse<T> response) {
