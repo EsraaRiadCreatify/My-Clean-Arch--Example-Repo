@@ -1,0 +1,25 @@
+{
+  "enableLocalization": true,
+  "enableDarkMode": true,
+  "enableAds": false,
+  "enableAnalytics": true,
+  "enableOfflineMode": true,
+  "enablePushNotifications": true,
+  "enableBetaFeatures": false,
+  "maintenanceMode": false,
+  "enableLogging": true,
+  "forceUpdateRequired": false,
+  "showDebugBanner": false,
+  "isTestMode": false,
+  
+  "primaryColor": "#4A90E2",
+  "fontFamily": "Cairo",
+  "themeMode": "system",
+  "animationSpeedMultiplier": 1.0,
+  
+  "apiBaseUrl": "https://api.example.com",
+  "defaultLanguage": "en",
+  
+  "storageType": "hive",
+  "useLocalDatabase": true
+} 
