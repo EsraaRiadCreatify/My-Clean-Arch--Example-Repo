@@ -67,11 +67,12 @@ class LoadingController {
   }) {
     return LoadingOverlay(
       isLoading: _isLoading,
-      child: child,
       message: message ?? _loadingStates.lastOrNull?.message,
-      backgroundColor: backgroundColor ?? _loadingStates.lastOrNull?.backgroundColor,
+      backgroundColor:
+          backgroundColor ?? _loadingStates.lastOrNull?.backgroundColor,
       spinnerColor: spinnerColor ?? _loadingStates.lastOrNull?.spinnerColor,
       opacity: opacity,
+      child: child,
     );
   }
 
@@ -88,11 +89,11 @@ class LoadingController {
     _overlayEntry = OverlayEntry(
       builder: (context) => LoadingOverlay(
         isLoading: true,
-        child: const SizedBox.shrink(),
         message: message,
         backgroundColor: backgroundColor,
         spinnerColor: spinnerColor,
         opacity: opacity,
+        child: const SizedBox.shrink(),
       ),
     );
 
@@ -125,4 +126,4 @@ class _LoadingState {
     this.spinnerColor,
     this.opacity = 0.5,
   });
-} 
+}

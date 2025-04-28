@@ -1,11 +1,12 @@
+import 'package:clean_architecture_example/features/profile/data/repositories/profile_repository.dart';
+import 'package:clean_architecture_example/features/profile/domain/services/profile_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:api/features/profile/data/repositories/profile_repository.dart';
-import 'package:api/features/profile/domain/services/profile_service.dart';
+
 
 import '../../features/user/data/datasources/user_remote_data_source.dart';
 import '../../features/user/data/repositories/user_repository_impl.dart';

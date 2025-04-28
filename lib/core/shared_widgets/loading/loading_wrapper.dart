@@ -6,10 +6,10 @@ class LoadingWrapper extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
 
   const LoadingWrapper({
-    Key? key,
+    super.key,
     required this.child,
     required this.navigatorKey,
-  }) : super(key: key);
+  });
 
   @override
   State<LoadingWrapper> createState() => _LoadingWrapperState();

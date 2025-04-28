@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
@@ -26,23 +25,21 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isLoading)
           Container(
-            color: (backgroundColor ?? Colors.black).withOpacity(opacity),
+            color: backgroundColor?.withValues(alpha: (opacity * 255)) ?? Colors.black.withValues(alpha: (opacity * 255)),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SpinKitFadingCircle(
-                    color: spinnerColor ?? Theme.of(context).primaryColor,
-                    size: 50.0,
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      spinnerColor ?? Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   if (message != null) ...[
                     const SizedBox(height: 16),
                     Text(
                       message!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ],
                 ],

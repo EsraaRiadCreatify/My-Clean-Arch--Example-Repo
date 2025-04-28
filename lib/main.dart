@@ -120,10 +120,10 @@ class MyApp extends StatelessWidget {
   final ApiClient apiClient;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.storageService,
     required this.apiClient,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

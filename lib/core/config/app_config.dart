@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../api/network/api_client.dart';
+import '../api/config/api_config.dart';
 
 /// App Configuration Class (فئة تكوين التطبيق)
 /// 
@@ -109,10 +110,30 @@ class AppConfigLoader {
   /// أخيراً يعود إلى التكوين المحلي الافتراضي
   static Future<void> loadConfig() async {
     try {
+      // Initialize API client (تهيئة عميل API)
+      final apiClient = ApiClient(
+        config: ApiConfig(
+          baseUrl: AppConfig.apiBaseUrl,
+          timeout: const Duration(seconds: 30),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          enableLogging: AppConfig.enableLogging,
+          enableRetry: true,
+          maxRetries: 3,
+          retryDelay: const Duration(seconds: 1),
+          handleErrors: true,
+          returnErrorResponse: false,
+          validateResponse: true,
+          useCache: false,
+        ),
+      );
+
       // Try to fetch remote config (محاولة جلب التكوين البعيد)
-      final response = await http.get(Uri.parse(_configUrl));
+      final response = await apiClient.get(_configUrl);
       if (response.statusCode == 200) {
-        final config = json.decode(response.body);
+        final config = json.decode(response.data);
         _updateConfig(config);
         await _cacheConfig(config);
       } else {
@@ -154,23 +175,11 @@ class AppConfigLoader {
     // Storage Configuration (تكوين التخزين)
     if (config['storageType'] != null) {
       AppConfig.storageType = StorageType.values.firstWhere(
-        (e) => e.toString() == 'StorageType.${config['storageType']}',
+        (e) => e.toString() == config['storageType'],
         orElse: () => StorageType.hive,
       );
     }
     AppConfig.useLocalDatabase = config['useLocalDatabase'] ?? AppConfig.useLocalDatabase;
-  }
-
-  /// Parse theme mode from string (تحليل وضع المظهر من نص)
-  static ThemeMode _parseThemeMode(String? mode) {
-    switch (mode?.toLowerCase()) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
   }
 
   /// Cache configuration locally (تخزين التكوين محلياً)
@@ -184,7 +193,20 @@ class AppConfigLoader {
     final prefs = await SharedPreferences.getInstance();
     final cachedConfig = prefs.getString(_configCacheKey);
     if (cachedConfig != null) {
-      _updateConfig(json.decode(cachedConfig));
+      final config = json.decode(cachedConfig);
+      _updateConfig(config);
+    }
+  }
+
+  /// Parse theme mode from string (تحليل نمط المظهر من النص)
+  static ThemeMode _parseThemeMode(String? mode) {
+    switch (mode?.toLowerCase()) {
+      case 'dark':
+        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
+      default:
+        return ThemeMode.system;
     }
   }
 } 

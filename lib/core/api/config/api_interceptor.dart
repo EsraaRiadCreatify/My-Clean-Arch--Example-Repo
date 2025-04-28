@@ -1,5 +1,6 @@
-import 'package:api/core/api/base/api_exception.dart';
-import 'package:api/core/api/utils/api_logger.dart';
+
+import 'package:clean_architecture_example/core/api/base/api_exception.dart';
+import 'package:clean_architecture_example/core/api/utils/api_logger.dart';
 import 'package:dio/dio.dart';
 
 
