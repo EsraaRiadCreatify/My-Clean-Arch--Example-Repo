@@ -1,344 +1,343 @@
-# Clean Architecture Flutter Project
+# Clean Architecture Example
 
-This project demonstrates a clean architecture implementation in Flutter, following best practices and SOLID principles.
+This project demonstrates a clean architecture implementation in Flutter using Riverpod for state management. It follows the principles of clean architecture to create a maintainable, testable, and scalable application.
+
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Architecture Layers](#architecture-layers)
+- [Project Structure](#project-structure)
+- [Core Services](#core-services)
+- [Features](#features)
+- [State Management](#state-management)
+- [Testing Strategy](#testing-strategy)
+- [Getting Started](#getting-started)
+- [Best Practices](#best-practices)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Project Overview
+
+This project implements a user management system using Clean Architecture principles. It demonstrates:
+
+- **Clean Architecture**: Separation of concerns with clear boundaries between layers
+- **State Management**: Using Riverpod for predictable state management
+- **Offline-First**: Local storage with SQLite and remote API synchronization
+- **Testing**: Comprehensive test coverage at all levels
+- **Dependency Injection**: Flexible and testable service management
+
+## Architecture Layers
+
+### 1. Presentation Layer
+- **Pages**: UI screens and layouts
+- **Widgets**: Reusable UI components
+- **Providers**: State management using Riverpod
+- **Responsibility**: Handles user interaction and displays data
+
+### 2. Domain Layer
+- **Entities**: Business objects and rules
+- **Use Cases**: Application-specific business rules
+- **Repository Interfaces**: Contracts for data operations
+- **Responsibility**: Contains business logic and rules
+
+### 3. Data Layer
+- **Repositories**: Implementation of repository interfaces
+- **Data Sources**: Local and remote data handling
+- **Models**: Data transfer objects and mappers
+- **Responsibility**: Manages data operations and storage
 
 ## Project Structure
 
 ```
 lib/
-├── core/
-│   ├── api/
-│   ├── database/
-│   ├── di/
-│   ├── error/
-│   ├── network/
-│   ├── theme/
-│   └── utils/
-├── features/
-│   ├── user/
-│   │   ├── data/
-│   │   ├── domain/
-│   │   └── presentation/
-│   └── product/
-│       ├── data/
-│       ├── domain/
-│       └── presentation/
-└── main.dart
+├── core/                    # Core functionality and utilities
+│   ├── api/                 # API related code
+│   │   ├── api_client.dart  # HTTP client implementation
+│   │   └── exceptions/      # Custom API exceptions
+│   ├── di/                  # Dependency injection
+│   │   └── injection.dart   # Service locator setup
+│   ├── network/             # Network related code
+│   │   └── network_info.dart # Network connectivity check
+│   ├── storage/             # Local storage
+│   │   └── storage_service.dart # Storage service interface
+│   └── utils/               # Utility functions
+│       └── constants.dart   # App constants
+├── features/                # Feature modules
+│   └── user/                # User feature
+│       ├── data/            # Data layer
+│       │   ├── datasources/ # Data sources
+│       │   │   ├── user_local_data_source.dart
+│       │   │   └── user_remote_data_source.dart
+│       │   ├── models/      # Data models
+│       │   └── repositories/ # Repository implementations
+│       ├── domain/          # Domain layer
+│       │   ├── entities/    # Business entities
+│       │   ├── repositories/ # Repository interfaces
+│       │   └── usecases/    # Use cases
+│       └── presentation/    # Presentation layer
+│           ├── pages/       # UI pages
+│           ├── providers/   # State providers
+│           └── widgets/     # Reusable widgets
+└── main.dart                # Application entry point
 ```
 
-## Architecture Layers
+## Core Services
 
-### 1. Presentation Layer
-- Contains UI components (Screens, Widgets)
-- Uses BLoC for state management
-- Implements MVVM pattern
-
-### 2. Domain Layer
-- Contains business logic
-- Defines entities and use cases
-- Repository interfaces
-
-### 3. Data Layer
-- Implements repository interfaces
-- Handles data sources (local and remote)
-- Data models and DTOs
-
-## Key Features
-
-1. **Clean Architecture**
-   - Separation of concerns
-   - Dependency injection
-   - SOLID principles
-
-2. **State Management**
-   - BLoC pattern
-   - Riverpod for dependency injection
-   - Reactive programming
-
-3. **Data Management**
-   - Local SQLite database
-   - Remote API integration
-   - Offline-first approach
-
-4. **Testing**
-   - Unit tests
-   - Widget tests
-   - Integration tests
-
-## Getting Started
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
-3. Run the app:
-   ```bash
-   flutter run
-   ```
-
-## Dependencies
-
-- `flutter_bloc`: State management
-- `riverpod`: Dependency injection
-- `sqflite`: Local database
-- `dio`: HTTP client
-- `freezed`: Code generation
-- `mocktail`: Testing
-
-## Development Guidelines
-
-1. **Code Style**
-   - Follow Flutter style guide
-   - Use meaningful names
-   - Write documentation
-
-2. **Architecture**
-   - Keep layers independent
-   - Use interfaces for dependencies
-   - Follow SOLID principles
-
-3. **Testing**
-   - Write tests for all features
-   - Maintain high test coverage
-   - Follow TDD approach
-
-## Documentation
-
-For more detailed information about testing, see [test/README.md](test/README.md)
-
-# Clean Architecture Testing Guide
-
-This guide explains the different types of testing in our Flutter Clean Architecture project and how to implement them effectively.
-
-## Types of Testing
-
-### 1. Unit Tests (اختبارات الوحدة)
-
-Unit tests focus on testing individual components in isolation. In our Clean Architecture, we test:
-- Use Cases
-- Repositories
-- Data Sources
-- Models
-
-#### Example from our project:
+### 1. API Client
 ```dart
-// test/features/user/data/repositories/user_repository_impl_test.dart
-test('should return remote data when online', () async {
-  // arrange
-  when(() => mockConnectivity.checkConnectivity())
-      .thenAnswer((_) async => ConnectivityResult.wifi);
-  when(() => mockRemoteDataSource.getUsers())
-      .thenAnswer((_) async => tUsers);
-  when(() => mockLocalDataSource.insertUser(any()))
-      .thenAnswer((_) async => 1);
+class ApiClient {
+  final Dio _dio;
+  
+  Future<Response> get(String path) async {
+    return _dio.get(path);
+  }
+  
+  Future<Response> post(String path, dynamic data) async {
+    return _dio.post(path, data: data);
+  }
+}
+```
+- Handles all HTTP requests
+- Manages authentication
+- Handles error responses
+- Configurable timeouts and interceptors
 
-  // act
-  final result = await repository.getUsers();
+### 2. Storage Service
+```dart
+abstract class StorageService {
+  Future<void> save(String key, String value);
+  Future<String?> get(String key);
+  Future<void> delete(String key);
+}
+```
+- Manages local data persistence
+- SQLite database operations
+- Secure storage for sensitive data
+- Cache management
 
-  // assert
-  verify(() => mockRemoteDataSource.getUsers()).called(1);
-  verify(() => mockLocalDataSource.insertUser(tUser)).called(1);
-  expect(result, equals(tUsers));
+### 3. Network Info
+```dart
+abstract class NetworkInfo {
+  Future<bool> get isConnected;
+  Stream<ConnectivityResult> get onConnectivityChanged;
+}
+```
+- Monitors internet connectivity
+- Provides real-time connection status
+- Handles offline/online transitions
+- Supports different connection types
+
+### 4. Dependency Injection
+```dart
+void init() {
+  // Core services
+  sl.registerLazySingleton<ApiClient>(() => ApiClient());
+  sl.registerLazySingleton<StorageService>(() => StorageServiceImpl());
+  sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
+  
+  // Feature services
+  sl.registerLazySingleton<UserRepository>(() => UserRepositoryImpl(
+    localDataSource: sl(),
+    remoteDataSource: sl(),
+    networkInfo: sl(),
+  ));
+}
+```
+- Manages service lifecycle
+- Provides dependency resolution
+- Supports testing with mock implementations
+- Configurable service registration
+
+## Features
+
+### User Management
+- User registration and login
+- Profile management
+- Password reset
+- User list and details
+
+### Data Synchronization
+- Offline data storage
+- Automatic sync when online
+- Conflict resolution
+- Data consistency checks
+
+### Error Handling
+- Network error recovery
+- Data validation
+- User-friendly error messages
+- Logging and monitoring
+
+## State Management
+
+### Provider Setup
+```dart
+final userProvider = StateNotifierProvider<UserNotifier, AsyncValue<List<UserEntity>>>((ref) {
+  return UserNotifier(ref.watch(userRepositoryProvider));
 });
 ```
 
-#### Why Unit Tests?
-- Fast execution
-- Isolated testing
-- Easy to maintain
-- Helps in TDD (Test-Driven Development)
-
-### 2. Widget Tests (اختبارات الواجهة)
-
-Widget tests verify the UI components work as expected. We test:
-- Screens
-- Widgets
-- State Management
-- User Interactions
-
-#### Example Structure:
+### State Updates
 ```dart
-// test/features/user/presentation/pages/user_list_page_test.dart
-void main() {
-  testWidgets('UserListPage displays loading indicator', (WidgetTester tester) async {
-    // arrange
-    await tester.pumpWidget(
-      MaterialApp(
-        home: UserListPage(),
+class UserNotifier extends StateNotifier<AsyncValue<List<UserEntity>>> {
+  final UserRepository _repository;
+  
+  UserNotifier(this._repository) : super(const AsyncValue.loading());
+  
+  Future<void> getUsers() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _repository.getUsers());
+  }
+}
+```
+
+### State Usage
+```dart
+class UserListPage extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usersAsync = ref.watch(userProvider);
+    
+    return usersAsync.when(
+      loading: () => CircularProgressIndicator(),
+      error: (error, stack) => ErrorWidget(error),
+      data: (users) => ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (context, index) => UserListItem(user: users[index]),
       ),
     );
-
-    // act
-    await tester.pump();
-
-    // assert
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
+  }
 }
 ```
 
-#### Why Widget Tests?
-- Verify UI components
-- Test user interactions
-- Ensure proper state management
-- Validate widget tree structure
+## Testing Strategy
 
-### 3. Integration Tests (اختبارات التكامل)
-
-Integration tests verify that different parts of the application work together. We test:
-- Complete features
-- Navigation flows
-- API integration
-- Database operations
-
-#### Example Structure:
-```dart
-// test_driver/app_test.dart
-void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  testWidgets('Complete user flow', (WidgetTester tester) async {
-    // arrange
-    await tester.pumpWidget(MyApp());
-
-    // act - navigate to user list
-    await tester.tap(find.byIcon(Icons.people));
-    await tester.pumpAndSettle();
-
-    // act - add new user
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-
-    // act - fill form
-    await tester.enterText(find.byType(TextField).first, 'Test User');
-    await tester.enterText(find.byType(TextField).last, 'test@example.com');
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    // assert
-    expect(find.text('Test User'), findsOneWidget);
-  });
-}
-```
-
-#### Why Integration Tests?
-- Test complete user flows
-- Verify system integration
-- End-to-end testing
-- Real-world scenario simulation
-
-## Testing Best Practices
-
-### 1. Test Organization
-- Group related tests using `group()`
-- Use descriptive test names
-- Follow AAA pattern (Arrange-Act-Assert)
-
-### 2. Mocking
-- Use `mocktail` for mocking
-- Mock external dependencies
-- Verify mock interactions
-
-### 3. Test Coverage
-- Aim for high coverage
-- Focus on critical paths
-- Test edge cases
-
-### 4. Test Data
-- Use test fixtures
-- Create reusable test data
-- Keep test data separate
-
-## Running Tests
-
-```bash
-# Run all tests
-flutter test
-
-# Run specific test file
-flutter test test/features/user/data/repositories/user_repository_impl_test.dart
-
-# Run tests with coverage
-flutter test --coverage
-```
-
-## Test-Driven Development (TDD)
-
-1. Write failing test
-2. Implement minimum code to pass
-3. Refactor while keeping tests green
-4. Repeat
-
-## Common Testing Patterns
-
-### 1. Repository Pattern Testing
+### 1. Unit Tests
 ```dart
 test('repository handles offline mode', () async {
-  // arrange
   when(() => mockConnectivity.checkConnectivity())
       .thenAnswer((_) async => ConnectivityResult.none);
   
-  // act
-  final result = await repository.getData();
+  final result = await repository.getUsers();
   
-  // assert
-  expect(result, isA<LocalData>());
+  expect(result, isA<List<UserEntity>>());
+  verify(() => mockLocalDataSource.getUsers()).called(1);
 });
 ```
 
-### 2. Use Case Testing
+### 2. Widget Tests
 ```dart
-test('use case processes data correctly', () async {
-  // arrange
-  final mockRepository = MockRepository();
-  final useCase = MyUseCase(mockRepository);
+testWidgets('UserListPage displays loading state', (tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp(home: UserListPage()),
+    ),
+  );
   
-  // act
-  final result = await useCase.execute();
-  
-  // assert
-  expect(result, isSuccessful);
+  expect(find.byType(CircularProgressIndicator), findsOneWidget);
 });
 ```
 
-### 3. Widget Testing
+### 3. Integration Tests
 ```dart
-testWidgets('widget updates state correctly', (tester) async {
-  // arrange
-  await tester.pumpWidget(MyWidget());
+test('Complete user flow', () async {
+  await tester.pumpWidget(MyApp());
+  await tester.tap(find.byIcon(Icons.add));
+  await tester.pumpAndSettle();
   
-  // act
-  await tester.tap(find.byIcon(Icons.refresh));
-  await tester.pump();
+  await tester.enterText(find.byType(TextField).first, 'Test User');
+  await tester.tap(find.text('Save'));
+  await tester.pumpAndSettle();
   
-  // assert
-  expect(find.byType(LoadingIndicator), findsOneWidget);
+  expect(find.text('Test User'), findsOneWidget);
 });
 ```
 
-## Testing Tools
+## Getting Started
 
-1. `mocktail`: For mocking dependencies
-2. `flutter_test`: For widget testing
-3. `integration_test`: For integration testing
-4. `build_runner`: For generating mocks
+### Prerequisites
+- Flutter SDK (latest version)
+- Dart SDK (latest version)
+- Android Studio / VS Code
+- Git
 
-## Common Pitfalls
+### Installation
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/clean-architecture-example.git
+cd clean-architecture-example
+```
 
-1. Not mocking external dependencies
-2. Testing implementation details
-3. Over-mocking
-4. Not cleaning up test data
-5. Ignoring edge cases
+2. Install dependencies:
+```bash
+flutter pub get
+```
 
-## Conclusion
+3. Run the app:
+```bash
+flutter run
+```
 
-Testing is crucial for maintaining a robust and reliable application. By implementing all three types of tests (Unit, Widget, and Integration), we ensure that our application works correctly at all levels.
+4. Run tests:
+```bash
+flutter test
+```
 
-Remember:
-- Write tests first (TDD)
-- Keep tests simple and focused
-- Maintain high test coverage
-- Test both success and failure cases
-- Keep tests up to date with code changes
+### Configuration
+1. Update API configuration in `lib/core/utils/constants.dart`
+2. Configure database settings in `lib/core/storage/storage_service.dart`
+3. Set up environment variables in `.env` file
+
+## Best Practices
+
+### 1. Clean Architecture Principles
+- **Separation of Concerns**: Each layer has a specific responsibility
+- **Dependency Rule**: Dependencies point inward
+- **Interface Segregation**: Small, focused interfaces
+- **Single Responsibility**: Each class has one reason to change
+
+### 2. Code Organization
+- **Feature-First**: Organize by feature, not by type
+- **Clear Boundaries**: Strict separation between layers
+- **Consistent Naming**: Follow naming conventions
+- **Documentation**: Document public APIs and complex logic
+
+### 3. Testing
+- **TDD**: Write tests before implementation
+- **Mock Dependencies**: Isolate components for testing
+- **Coverage**: Maintain high test coverage
+- **CI/CD**: Automate testing in pipeline
+
+### 4. State Management
+- **Immutable State**: State changes through new objects
+- **Unidirectional Flow**: Data flows in one direction
+- **Predictable Updates**: Clear state transition rules
+- **Error Handling**: Graceful error states
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+- Follow Flutter style guide
+- Use meaningful names
+- Write documentation
+- Keep methods small and focused
+
+### Pull Request Process
+1. Update documentation
+2. Add tests for new features
+3. Ensure all tests pass
+4. Update version numbers
+5. Create detailed PR description
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For support, email support@example.com or join our Slack channel.
