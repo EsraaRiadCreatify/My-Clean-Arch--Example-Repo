@@ -4,7 +4,7 @@ import 'package:api/features/user/domain/repositories/user_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await configureDependencies();
+  await init(); // Initialize dependencies
   runApp(const MyApp());
 }
 
@@ -40,7 +40,7 @@ class HomePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  final userRepository = getIt<UserRepository>();
+                  final userRepository = sl<UserRepository>();
                   final users = await userRepository.getUsers();
                   // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(

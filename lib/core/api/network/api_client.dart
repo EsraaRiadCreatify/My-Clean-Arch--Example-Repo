@@ -1,16 +1,7 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../base/api_exception.dart';
-import '../../shared_widgets/loading/loading_controller.dart';
 import '../config/api_config.dart';
 import '../config/api_interceptor.dart';
-import '../base/api_response.dart';
-import '../utils/api_validator.dart';
 import '../utils/api_cache.dart';
-import 'dart:io';
-import 'package:get_it/get_it.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hive/hive.dart';
 import 'api_request_handler.dart';
 import 'api_error_handler.dart';
 import 'api_headers_handler.dart';
@@ -18,11 +9,9 @@ import 'api_headers_handler.dart';
 class ApiClient {
   final Dio _dio;
   final ApiConfig _config;
-  final ApiCache? _cache;
   final ApiRequestHandler _requestHandler;
   final ApiErrorHandler _errorHandler;
   final CancelToken _cancelToken = CancelToken();
-  final _loadingController = LoadingController();
   
   Dio get dio => _dio;
   
@@ -258,118 +247,6 @@ class ApiClient {
 
   void cancelRequests() {
     _cancelToken.cancel();
-  }
-
-  String _getLoadingMessage(RequestMethod method) {
-    switch (method) {
-      case RequestMethod.get:
-        return "جاري جلب البيانات...";
-      case RequestMethod.post:
-        return "جاري إرسال البيانات...";
-      case RequestMethod.put:
-      case RequestMethod.patch:
-        return "جاري تحديث البيانات...";
-      case RequestMethod.delete:
-        return "جاري حذف البيانات...";
-      default:
-        return "جاري معالجة الطلب...";
-    }
-  }
-
-  void _handleError(dynamic error) {
-    if (error is DioException) {
-      switch (error.type) {
-        case DioExceptionType.connectionTimeout:
-        case DioExceptionType.sendTimeout:
-        case DioExceptionType.receiveTimeout:
-          throw TimeoutException();
-        case DioExceptionType.badResponse:
-          _handleResponseError(error.response);
-          break;
-        case DioExceptionType.cancel:
-          throw ApiException(message: 'تم إلغاء الطلب');
-        case DioExceptionType.connectionError:
-          throw NetworkException();
-        case DioExceptionType.unknown:
-          throw ApiException(message: 'حدث خطأ غير متوقع');
-        case DioExceptionType.badCertificate:
-          throw ApiException(message: 'شهادة غير صالحة');
-      }
-    }
-    throw ApiException(message: error.toString());
-  }
-
-  void _handleResponseError(Response? response) {
-    if (response == null) {
-      throw ServerException();
-    }
-
-    switch (response.statusCode) {
-      case 400:
-        throw ApiException(message: _parseError(response));
-      case 401:
-        _handleUnauthorized();
-        throw UnauthorizedException();
-      case 403:
-        throw ApiException(message: 'غير مسموح لك بالوصول');
-      case 404:
-        throw NotFoundException();
-      case 500:
-        throw ServerException();
-      default:
-        throw ServerException();
-    }
-  }
-
-  void _handleUnauthorized() {
-    // Clear user data from all storage types
-    _clearUserData();
-    
-    // Call the unauthorized callback if provided
-    onUnauthorized?.call();
-  }
-
-  void _clearUserData() {
-    // Clear from SharedPreferences
-    GetIt.I<SharedPreferences>().clear();
-    
-    // Clear from Hive
-    GetIt.I<Box>().clear();
-    
-    // Clear from Memory Storage
-    GetIt.I<Map<String, dynamic>>().clear();
-  }
-
-  String _parseError(Response response) {
-    try {
-      final data = response.data;
-      if (data is String) {
-        final json = jsonDecode(data);
-        return json['message'] ?? json['error'] ?? 'حدث خطأ';
-      } else if (data is Map) {
-        return data['message'] ?? data['error'] ?? 'حدث خطأ';
-      }
-      return 'حدث خطأ';
-    } catch (e) {
-      return 'حدث خطأ';
-    }
-  }
-
-  Map<String, String> _getDefaultHeaders() {
-    return {
-      'Accept': 'image/webp,image/*,*/*;q=0.8',
-      'device': 'myApp',
-      'device_type': Platform.isIOS ? 'ios' : 'android',
-      'lang': 'ar',
-    };
-  }
-
-  String _getCacheKey(String endpoint, Map<String, dynamic>? queryParameters) {
-    final queryString = queryParameters?.entries
-        .map((e) => '${e.key}=${e.value}')
-        .join('&');
-    
-    return queryString != null ? '$endpoint?$queryString' : endpoint;
   }
 }
 

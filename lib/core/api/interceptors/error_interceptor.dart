@@ -1,9 +1,7 @@
 import 'package:dio/dio.dart';
 import '../base/api_exception.dart';
-import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive/hive.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ErrorInterceptor extends Interceptor {
   final SharedPreferences _prefs;
