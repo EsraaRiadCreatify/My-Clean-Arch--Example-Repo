@@ -1,22 +1,34 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import '../base/api_exception.dart';
+import '../../shared_widgets/loading/loading_controller.dart';
 import '../config/api_config.dart';
 import '../config/api_interceptor.dart';
-import '../base/api_exception.dart';
 import '../base/api_response.dart';
 import '../utils/api_validator.dart';
 import '../utils/api_cache.dart';
 import 'dart:io';
+import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
 
 class ApiClient {
   final Dio _dio;
   final ApiConfig _config;
   final ApiCache? _cache;
   final CancelToken _cancelToken = CancelToken();
+  final _loadingController = LoadingController();
+  
+  Dio get dio => _dio;
+  
+  // Callback for unauthorized handling
+  void Function()? onUnauthorized;
   
   ApiClient({
     required ApiConfig config,
     ApiCache? cache,
     ApiInterceptor? interceptor,
+    this.onUnauthorized,
   }) : _config = config,
        _cache = cache,
        _dio = Dio(BaseOptions(
@@ -24,61 +36,298 @@ class ApiClient {
          connectTimeout: config.timeout,
          headers: config.headers,
        )) {
-    _initDio(interceptor);
+    _setupDio(interceptor);
   }
 
-  void _initDio(ApiInterceptor? interceptor) {
-    // Add custom interceptor if provided
+  void _setupDio(ApiInterceptor? interceptor) {
+    _dio.options.baseUrl = _config.baseUrl;
+    _dio.options.connectTimeout = _config.timeout;
+    _dio.options.receiveTimeout = _config.timeout;
+    _dio.options.headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
     if (interceptor != null) {
       _dio.interceptors.add(interceptor);
     }
-
-    // Add default interceptors
-    _dio.interceptors.addAll([
-      _authInterceptor(),
-      _loggingInterceptor(),
-      _errorInterceptor(),
-    ]);
   }
 
-  InterceptorsWrapper _authInterceptor() {
-    return InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        // Add auth token if exists
-        final token = StorageService.getUser()?.token;
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
+  Future<T> get<T>(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
+    bool handleError = true,
+    bool showLoading = true,
+    bool returnFullResponse = false,
+  }) async {
+    final response = await _request<T>(
+      endpoint: endpoint,
+      method: RequestMethod.get,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      onReceiveProgress: onReceiveProgress,
+      handleError: handleError,
+      showLoading: showLoading,
     );
+    
+    return returnFullResponse ? response as T : response.data as T;
   }
 
-  InterceptorsWrapper _loggingInterceptor() {
-    return LogInterceptor(
-      request: true,
-      requestHeader: true,
-      requestBody: true,
-      responseHeader: true,
-      responseBody: true,
-      error: true,
+  Future<T> post<T>(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    bool handleError = true,
+    bool showLoading = true,
+    bool returnFullResponse = false,
+  }) async {
+    final response = await _request<T>(
+      endpoint: endpoint,
+      method: RequestMethod.post,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+      handleError: handleError,
+      showLoading: showLoading,
     );
+    
+    return returnFullResponse ? response as T : response.data as T;
   }
 
-  InterceptorsWrapper _errorInterceptor() {
-    return InterceptorsWrapper(
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          await _handleTokenExpiration();
-        }
-        return handler.next(error);
-      },
+  Future<T> put<T>(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    bool handleError = true,
+    bool showLoading = true,
+    bool returnFullResponse = false,
+  }) async {
+    final response = await _request<T>(
+      endpoint: endpoint,
+      method: RequestMethod.put,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+      handleError: handleError,
+      showLoading: showLoading,
     );
+    
+    return returnFullResponse ? response as T : response.data as T;
   }
 
-  Future<void> _handleTokenExpiration() async {
-    StorageService.removeUser();
-    // Navigate to login or handle token expiration
+  Future<T> delete<T>(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    bool handleError = true,
+    bool showLoading = true,
+    bool returnFullResponse = false,
+  }) async {
+    final response = await _request<T>(
+      endpoint: endpoint,
+      method: RequestMethod.delete,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      handleError: handleError,
+      showLoading: showLoading,
+    );
+    
+    return returnFullResponse ? response as T : response.data as T;
+  }
+
+  Future<T> patch<T>(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    bool handleError = true,
+    bool showLoading = true,
+    bool returnFullResponse = false,
+  }) async {
+    final response = await _request<T>(
+      endpoint: endpoint,
+      method: RequestMethod.patch,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+      handleError: handleError,
+      showLoading: showLoading,
+    );
+    
+    return returnFullResponse ? response as T : response.data as T;
+  }
+
+  Future<Response<T>> _request<T>({
+    required String endpoint,
+    required RequestMethod method,
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    bool handleError = true,
+    bool showLoading = true,
+  }) async {
+    try {
+      if (showLoading) {
+        _loadingController.startLoading(
+          isGlobal: true,
+          message: _getLoadingMessage(method),
+        );
+      }
+
+      final response = await _dio.request<T>(
+        endpoint,
+        data: data,
+        queryParameters: queryParameters,
+        options: Options(
+          method: method.name,
+          headers: {
+            ..._getDefaultHeaders(),
+            ...options?.headers ?? {},
+          },
+          contentType: options?.contentType,
+        ),
+        cancelToken: cancelToken ?? _cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      );
+
+      return response;
+    } catch (e) {
+      if (handleError) {
+        _handleError(e);
+      }
+      rethrow;
+    } finally {
+      if (showLoading) {
+        _loadingController.stopLoading(isGlobal: true);
+      }
+    }
+  }
+
+  String _getLoadingMessage(RequestMethod method) {
+    switch (method) {
+      case RequestMethod.get:
+        return "جاري جلب البيانات...";
+      case RequestMethod.post:
+        return "جاري إرسال البيانات...";
+      case RequestMethod.put:
+      case RequestMethod.patch:
+        return "جاري تحديث البيانات...";
+      case RequestMethod.delete:
+        return "جاري حذف البيانات...";
+      default:
+        return "جاري معالجة الطلب...";
+    }
+  }
+
+  void _handleError(dynamic error) {
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          throw TimeoutException();
+        case DioExceptionType.badResponse:
+          _handleResponseError(error.response);
+          break;
+        case DioExceptionType.cancel:
+          throw ApiException(message: 'تم إلغاء الطلب');
+        case DioExceptionType.connectionError:
+          throw NetworkException();
+        case DioExceptionType.unknown:
+          throw ApiException(message: 'حدث خطأ غير متوقع');
+        case DioExceptionType.badCertificate:
+          throw ApiException(message: 'شهادة غير صالحة');
+      }
+    }
+    throw ApiException(message: error.toString());
+  }
+
+  void _handleResponseError(Response? response) {
+    if (response == null) {
+      throw ServerException();
+    }
+
+    switch (response.statusCode) {
+      case 400:
+        throw ApiException(message: _parseError(response));
+      case 401:
+        _handleUnauthorized();
+        throw UnauthorizedException();
+      case 403:
+        throw ApiException(message: 'غير مسموح لك بالوصول');
+      case 404:
+        throw NotFoundException();
+      case 500:
+        throw ServerException();
+      default:
+        throw ServerException();
+    }
+  }
+
+  void _handleUnauthorized() {
+    // Clear user data from all storage types
+    _clearUserData();
+    
+    // Call the unauthorized callback if provided
+    onUnauthorized?.call();
+  }
+
+  void _clearUserData() {
+    // Clear from SharedPreferences
+    GetIt.I<SharedPreferences>().clear();
+    
+    // Clear from Hive
+    GetIt.I<Box>().clear();
+    
+    // Clear from Memory Storage
+    GetIt.I<Map<String, dynamic>>().clear();
+  }
+
+  String _parseError(Response response) {
+    try {
+      final data = response.data;
+      if (data is String) {
+        final json = jsonDecode(data);
+        return json['message'] ?? json['error'] ?? 'حدث خطأ';
+      } else if (data is Map) {
+        return data['message'] ?? data['error'] ?? 'حدث خطأ';
+      }
+      return 'حدث خطأ';
+    } catch (e) {
+      return 'حدث خطأ';
+    }
   }
 
   Map<String, String> _getDefaultHeaders() {
@@ -86,7 +335,7 @@ class ApiClient {
       'Accept': 'image/webp,image/*,*/*;q=0.8',
       'device': 'myApp',
       'device_type': Platform.isIOS ? 'ios' : 'android',
-      'lang': StorageService.getLang(),
+      'lang': 'ar',
     };
   }
 
@@ -110,7 +359,12 @@ class ApiClient {
     final shouldValidate = validateResponse ?? _config.validateResponse;
 
     try {
-      if (showLoading) Loader.start();
+      if (showLoading) {
+        _loadingController.startLoading(
+          isGlobal: true,
+          message: "جاري معالجة الطلب...",
+        );
+      }
 
       // Check cache first if enabled
       if (shouldUseCache && _cache != null) {
@@ -119,7 +373,9 @@ class ApiClient {
         );
         
         if (cachedData != null) {
-          if (showLoading) Loader.stop();
+          if (showLoading) {
+            _loadingController.stopLoading(isGlobal: true);
+          }
           return ApiResponse<T>(
             data: cachedData,
             success: true,
@@ -134,7 +390,7 @@ class ApiClient {
         queryParameters: {
           ...queryParameters ?? {},
           'device_type': Platform.isIOS ? 'ios' : 'android',
-          'lang': StorageService.getLang(),
+          'lang': 'ar',
         },
         options: Options(
           method: method.name,
@@ -147,7 +403,9 @@ class ApiClient {
         cancelToken: _cancelToken,
       );
 
-      if (showLoading) Loader.stop();
+      if (showLoading) {
+        _loadingController.stopLoading(isGlobal: true);
+      }
 
       final apiResponse = ApiResponse<T>(
         data: response.data,
@@ -171,7 +429,9 @@ class ApiClient {
 
       return apiResponse;
     } catch (e) {
-      if (showLoading) Loader.stop();
+      if (showLoading) {
+        _loadingController.stopLoading(isGlobal: true);
+      }
 
       if (!shouldHandleErrors) {
         rethrow;
@@ -194,75 +454,6 @@ class ApiClient {
 
       throw ApiException.fromError(e);
     }
-  }
-
-  // Convenience methods for common HTTP methods
-  Future<ApiResponse<T>> get<T>({
-    required String endpoint,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-    bool? useCache,
-    Duration? cacheDuration,
-    bool? handleErrors,
-    bool? returnErrorResponse,
-    bool? validateResponse,
-  }) async {
-    return request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.get,
-      queryParameters: queryParameters,
-      options: options,
-      useCache: useCache,
-      cacheDuration: cacheDuration,
-      handleErrors: handleErrors,
-      returnErrorResponse: returnErrorResponse,
-      validateResponse: validateResponse,
-    );
-  }
-
-  Future<ApiResponse<T>> post<T>({
-    required String endpoint,
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    return request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.post,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
-  }
-
-  Future<ApiResponse<T>> put<T>({
-    required String endpoint,
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    return request<T>(
-      endpoint: endpoint,
-      method: RequestMethod.put,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
-  }
-
-  Future<ApiResponse<T>> delete<T>({
-    required String endpoint,
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    return request<T>(
-      endpoint: endpoint,
-      queryParameters: queryParameters,
-      method: RequestMethod.delete,
-      data: data,
-      options: options,
-    );
   }
 
   void cancelRequests() {

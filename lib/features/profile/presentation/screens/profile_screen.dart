@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../providers/profile_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/shared_widgets/loading/loading_extension.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,26 +15,29 @@ class ProfileScreen extends ConsumerWidget {
         title: const Text('Profile'),
       ),
       body: profileState.when(
-        data: (profile) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage(profile['avatar']),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                profile['name'],
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                profile['email'],
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
+        data: (profile) => context.withLoading(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: NetworkImage(profile['avatar']),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  profile['name'],
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  profile['email'],
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
           ),
+          message: "جاري تحميل الملف الشخصي...",
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => Center(
