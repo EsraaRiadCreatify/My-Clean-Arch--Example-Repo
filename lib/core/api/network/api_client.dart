@@ -196,6 +196,10 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
     bool handleError = true,
     bool showLoading = true,
+    bool? useCache,
+    Duration? cacheDuration,
+    bool? validateResponse,
+    bool isFormData = false,
   }) async {
     try {
       if (showLoading) {
@@ -205,10 +209,34 @@ class ApiClient {
         );
       }
 
+      // Check cache first if enabled
+      final shouldUseCache = useCache ?? _config.useCache;
+      if (shouldUseCache && _cache != null) {
+        final cachedData = await _cache!.getCachedResponse<T>(
+          key: _getCacheKey(endpoint, queryParameters),
+        );
+        
+        if (cachedData != null) {
+          if (showLoading) {
+            _loadingController.stopLoading(isGlobal: true);
+          }
+          return Response(
+            data: cachedData,
+            statusCode: 200,
+            requestOptions: RequestOptions(path: endpoint),
+          );
+        }
+      }
+
+      // Make the request
       final response = await _dio.request<T>(
         endpoint,
-        data: data,
-        queryParameters: queryParameters,
+        data: isFormData ? FormData.fromMap(data ?? {}) : data,
+        queryParameters: {
+          ...queryParameters ?? {},
+          'device_type': Platform.isIOS ? 'ios' : 'android',
+          'lang': 'ar',
+        },
         options: Options(
           method: method.name,
           headers: {
@@ -221,6 +249,26 @@ class ApiClient {
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
       );
+
+      // Validate response if enabled
+      final shouldValidate = validateResponse ?? _config.validateResponse;
+      if (shouldValidate) {
+        final apiResponse = ApiResponse<T>(
+          data: response.data,
+          statusCode: response.statusCode,
+          success: true,
+        );
+        ApiValidator.validateResponse(apiResponse);
+      }
+
+      // Cache response if enabled
+      if (shouldUseCache && _cache != null) {
+        await _cache!.cacheResponse(
+          key: _getCacheKey(endpoint, queryParameters),
+          data: response.data,
+          cacheDuration: cacheDuration,
+        );
+      }
 
       return response;
     } catch (e) {
@@ -337,123 +385,6 @@ class ApiClient {
       'device_type': Platform.isIOS ? 'ios' : 'android',
       'lang': 'ar',
     };
-  }
-
-  Future<ApiResponse<T>> request<T>({
-    required String endpoint,
-    required RequestMethod method,
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-    bool? useCache,
-    Duration? cacheDuration,
-    bool? handleErrors,
-    bool? returnErrorResponse,
-    bool? validateResponse,
-    bool showLoading = false,
-    bool isFormData = false,
-  }) async {
-    final shouldUseCache = useCache ?? _config.useCache;
-    final shouldHandleErrors = handleErrors ?? _config.handleErrors;
-    final shouldReturnError = returnErrorResponse ?? _config.returnErrorResponse;
-    final shouldValidate = validateResponse ?? _config.validateResponse;
-
-    try {
-      if (showLoading) {
-        _loadingController.startLoading(
-          isGlobal: true,
-          message: "جاري معالجة الطلب...",
-        );
-      }
-
-      // Check cache first if enabled
-      if (shouldUseCache && _cache != null) {
-        final cachedData = await _cache!.getCachedResponse<T>(
-          key: _getCacheKey(endpoint, queryParameters),
-        );
-        
-        if (cachedData != null) {
-          if (showLoading) {
-            _loadingController.stopLoading(isGlobal: true);
-          }
-          return ApiResponse<T>(
-            data: cachedData,
-            success: true,
-          );
-        }
-      }
-
-      // Make the request
-      final response = await _dio.request(
-        endpoint,
-        data: isFormData ? FormData.fromMap(data ?? {}) : data,
-        queryParameters: {
-          ...queryParameters ?? {},
-          'device_type': Platform.isIOS ? 'ios' : 'android',
-          'lang': 'ar',
-        },
-        options: Options(
-          method: method.name,
-          headers: {
-            ..._getDefaultHeaders(),
-            ...options?.headers ?? {},
-          },
-          contentType: options?.contentType,
-        ),
-        cancelToken: _cancelToken,
-      );
-
-      if (showLoading) {
-        _loadingController.stopLoading(isGlobal: true);
-      }
-
-      final apiResponse = ApiResponse<T>(
-        data: response.data,
-        statusCode: response.statusCode,
-        success: true,
-      );
-
-      // Validate response if enabled
-      if (shouldValidate) {
-        ApiValidator.validateResponse(apiResponse);
-      }
-
-      // Cache response if enabled
-      if (shouldUseCache && _cache != null) {
-        await _cache!.cacheResponse(
-          key: _getCacheKey(endpoint, queryParameters),
-          data: response.data,
-          cacheDuration: cacheDuration,
-        );
-      }
-
-      return apiResponse;
-    } catch (e) {
-      if (showLoading) {
-        _loadingController.stopLoading(isGlobal: true);
-      }
-
-      if (!shouldHandleErrors) {
-        rethrow;
-      }
-
-      if (shouldReturnError) {
-        if (e is ApiException) {
-          return ApiResponse<T>(
-            message: e.message,
-            statusCode: e.statusCode,
-            success: false,
-          );
-        }
-
-        return ApiResponse<T>(
-          message: e.toString(),
-          success: false,
-        );
-      }
-
-      throw ApiException.fromError(e);
-    }
   }
 
   void cancelRequests() {
