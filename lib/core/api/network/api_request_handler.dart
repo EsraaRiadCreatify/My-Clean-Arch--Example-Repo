@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import '../base/api_exception.dart';
 import '../base/api_response.dart';
 import '../utils/api_validator.dart';
 import '../utils/api_cache.dart';

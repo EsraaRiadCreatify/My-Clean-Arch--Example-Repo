@@ -9,6 +9,7 @@ import 'api_headers_handler.dart';
 class ApiClient {
   final Dio _dio;
   final ApiConfig _config;
+  final ApiCache? _cache;
   final ApiRequestHandler _requestHandler;
   final ApiErrorHandler _errorHandler;
   final CancelToken _cancelToken = CancelToken();
