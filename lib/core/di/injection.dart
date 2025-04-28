@@ -1,5 +1,11 @@
 import 'package:clean_architecture_example/features/profile/data/repositories/profile_repository.dart';
 import 'package:clean_architecture_example/features/profile/domain/services/profile_service.dart';
+import 'package:clean_architecture_example/features/user/data/datasources/user_local_data_source.dart';
+import 'package:clean_architecture_example/features/user/data/datasources/user_remote_data_source.dart';
+
+import 'package:clean_architecture_example/core/database/database_helper.dart';
+import 'package:clean_architecture_example/features/user/data/datasources/user_remote_data_source_impl.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive/hive.dart';
@@ -8,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 
-import '../../features/user/data/datasources/user_remote_data_source.dart';
 import '../../features/user/data/repositories/user_repository_impl.dart';
 import '../../features/user/domain/repositories/user_repository.dart';
 import '../api/config/api_config.dart';
@@ -47,6 +52,9 @@ Future<void> _initExternal() async {
   // Initialize Memory Storage
   final memoryStorage = <String, dynamic>{};
   sl.registerSingleton<Map<String, dynamic>>(memoryStorage);
+
+  // Initialize Connectivity
+  sl.registerSingleton<Connectivity>(Connectivity());
 }
 
 void _initCore() {
@@ -103,11 +111,20 @@ void _initFeatures() {
 
   // User Feature
   sl.registerLazySingleton<UserRemoteDataSource>(
-    () => UserRemoteDataSource(sl<ApiClient>()),
+    () => UserRemoteDataSourceImpl(sl<ApiClient>()),
   );
 
+  sl.registerLazySingleton<UserLocalDataSource>(
+    () => UserLocalDataSourceImpl(sl<DatabaseHelper>()),
+  );
+
+  // Register Repositories
   sl.registerLazySingleton<UserRepository>(
-    () => UserRepositoryImpl(sl<UserRemoteDataSource>()),
+    () => UserRepositoryImpl(
+      remoteDataSource: sl<UserRemoteDataSource>(),
+      localDataSource: sl<UserLocalDataSource>(),
+      connectivity: sl<Connectivity>(),
+    ),
   );
 
   // Repositories
